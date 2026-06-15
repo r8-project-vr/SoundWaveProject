@@ -5,7 +5,7 @@
 	"Description": "",
 	"Modules": [
 		{
-			"Name": "SoundWaveProject",
+			"Name": "Test_VRProject",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		}
