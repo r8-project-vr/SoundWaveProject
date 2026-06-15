@@ -3,13 +3,13 @@
 using UnrealBuildTool;
 using System.Collections.Generic;
 
-public class SoundWaveProjectEditorTarget : TargetRules
+public class Test_VRProjectEditorTarget : TargetRules
 {
-	public SoundWaveProjectEditorTarget(TargetInfo Target) : base(Target)
+	public Test_VRProjectEditorTarget(TargetInfo Target) : base(Target)
 	{
 		Type = TargetType.Editor;
 		DefaultBuildSettings = BuildSettingsVersion.V5;
 
-		ExtraModuleNames.AddRange( new string[] { "SoundWaveProject" } );
+		ExtraModuleNames.AddRange( new string[] { "Test_VRProject" } );
 	}
 }
