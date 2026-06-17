@@ -17,8 +17,35 @@
 class UMaterialInterface;
 class UNiagaraSystem;
 class UInputAction;
+class UNiagaraComponent;
 
 struct FInputActionValue;
+
+USTRUCT(BlueprintType)
+struct FEcho
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FVector Origin = FVector::ZeroVector;
+
+	UPROPERTY()
+	float CurrentRadius = 0.f;
+
+	UPROPERTY(EditAnywhere, Category = "Echo")
+	float MaxRadius = 1000.f;
+
+	UPROPERTY(EditAnywhere, Category = "Echo")
+	float Speed = 2000.f;
+
+	FEcho() = default;
+
+	FEcho(const FVector& InOrigin, float InMaxRadius, float InSpeed)
+		: Origin(InOrigin), CurrentRadius(0.f), MaxRadius(InMaxRadius), Speed(InSpeed)
+	{}
+};
+
+
 UCLASS()
 class TEST_VRPROJECT_API AVRCharacter : public ACharacter
 {
@@ -43,12 +70,17 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Echo")
 	UMaterialParameterCollection* EchoMPC;
 
+	// Niagara エフェクト（各エコーごとにスポーンする）
+	UPROPERTY(EditAnywhere, Category = "Echo")
+	UNiagaraSystem* EchoNiagara;
+
 	void EmitEcho(const FInputActionValue& Value);
 
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	// 旧来のフラグは残すが、実際の拡張は ActiveEchoes が担当
 	bool bEchoActive = false;
 
 	UPROPERTY(EditAnywhere, Category = "Echo")
@@ -65,4 +97,28 @@ public:
 
 	FVector EchoOrigin;
 
+	// --- 歩行エコー設定 ---
+	UPROPERTY(EditAnywhere, Category = "Echo")
+	float WalkEchoInterval = 0.5f;
+
+	UPROPERTY(EditAnywhere, Category = "Echo")
+	float WalkEchoVelocityThreshold = 30.f;
+
+	UPROPERTY(EditAnywhere, Category = "Echo")
+	float WalkEchoRadius = 400.f;
+
+private:
+	// 歩行エコー用タイマー
+	float WalkEchoTimer = 0.f;
+
+	// 現在アクティブなエコー群
+	UPROPERTY()
+	TArray<FEcho> ActiveEchoes;
+
+	// 各エコー用の Niagara コンポーネント群（視覚的に重ねるため保持）
+	UPROPERTY()
+	TArray<UNiagaraComponent*> ActiveEchoComponents;
+
+	// エコーを新規追加するユーティリティ
+	void TriggerEchoAt(const FVector& Location, float Radius);
 };
