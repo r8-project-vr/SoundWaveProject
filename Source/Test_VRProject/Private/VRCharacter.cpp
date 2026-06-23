@@ -1,6 +1,5 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "VRCharacter.h"
 #include "DrawDebugHelpers.h"
 #include "Kismet/GameplayStatics.h"
@@ -11,18 +10,22 @@
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
 
-// Sets default values
 AVRCharacter::AVRCharacter()
 {
-	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	GlobalEchoFadeTime = 0.5f;
 
+	SmoothedEchoAlpha = 0.0f;
+	SmoothedEchoRadius = 0.0f;
+	SmoothedEchoInnerRadius = 0.0f;
+	SmoothedEchoOrigin = FVector::ZeroVector;
 }
 
-// Called when the game starts or when spawned
 void AVRCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	SmoothedEchoOrigin = GetActorLocation();
 
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
@@ -39,7 +42,6 @@ void AVRCharacter::BeginPlay()
 
 void AVRCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
-	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		EnhancedInputComponent->BindAction(
@@ -53,10 +55,9 @@ void AVRCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 void AVRCharacter::TriggerEchoAt(const FVector& Location, float Radius)
 {
-	// 新しいエコーを配列に追加（既存は上書きされない）
-	ActiveEchoes.Add(FEcho(Location, Radius, EchoSpeed));
+	FEcho NewEcho(Location, Radius, EchoSpeed, GlobalEchoFadeTime);
+	ActiveEchoes.Add(NewEcho);
 
-	// 各エコーごとに視覚的エフェクトをスポーン（重なって表示される）
 	if (EchoNiagara)
 	{
 		UNiagaraComponent* Comp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
@@ -67,79 +68,20 @@ void AVRCharacter::TriggerEchoAt(const FVector& Location, float Radius)
 
 		if (Comp)
 		{
-			// オプション：Niagara にパラメータを渡すならここで行う
-			// Comp->SetVariableFloat("User.EchoMaxRadius", Radius); // Niagara 側で User.EchoMaxRadius を作る場合など
-
 			ActiveEchoComponents.Add(Comp);
+			if (ActiveEchoes.Num() > 0)
+			{
+				ActiveEchoes.Last().NiagaraComp = Comp;
+			}
 		}
-	}
-
-	const float LifeTime = (EchoSpeed > 0.f) ? (Radius / EchoSpeed) : 1.f;
-	/*DrawDebugSphere(
-		GetWorld(),
-		Location,
-		Radius,
-		32,
-		FColor::Green,
-		false,
-		LifeTime
-	);*/
-
-	// 既存のログ/当たり判定は発生時点で実行（従来の EmitEcho と同様）
-	TArray<AActor*> Actors;
-	UGameplayStatics::GetAllActorsWithTag(
-		GetWorld(),
-		FName("EchoObject"),
-		Actors
-	);
-
-	for (AActor* Actor : Actors)
-	{
-		if (!Actor)
-		{
-			continue;
-		}
-
-		float Distance =
-			FVector::Distance(
-				Location,
-				Actor->GetActorLocation()
-			);
-
-		if (Distance > Radius)
-		{
-			continue;
-		}
-
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("Detected : %s"),
-			*Actor->GetName()
-		);
-
-		UStaticMeshComponent* StaticMesh =
-			Actor->FindComponentByClass<UStaticMeshComponent>();
-
-		if (!StaticMesh)
-		{
-			continue;
-		}
-
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("Echo!")
-		);
 	}
 }
 
-// Called every frame
 void AVRCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	// --- 歩行検出（常にチェック） ---
+	// 歩行エコー
 	WalkEchoTimer += DeltaTime;
 	const float Speed = GetVelocity().Size();
 	if (Speed > WalkEchoVelocityThreshold && WalkEchoTimer >= WalkEchoInterval)
@@ -148,30 +90,80 @@ void AVRCharacter::Tick(float DeltaTime)
 		WalkEchoTimer = 0.f;
 	}
 
+	// 各エコー更新 + 合成（内側フェード半径を計算）
+	float MaxAlpha = 0.0f;
+	float MaxRadius = 0.0f;
+	float MaxInnerRadius = 0.0f; // これをポストプロセスへ渡す（中心から透明になる量）
+	FVector WeightedOrigin = FVector::ZeroVector;
+	float TotalWeight = 0.0f;
+
 	for (int32 i = ActiveEchoes.Num() - 1; i >= 0; --i)
 	{
 		FEcho& Echo = ActiveEchoes[i];
-		Echo.CurrentRadius += Echo.Speed * DeltaTime;
 
-		// 各エコーの視覚化
-		DrawDebugSphere(
-			GetWorld(),
-			Echo.Origin,
-			Echo.CurrentRadius,
-			24,
-			FColor::Green,
-			false,
-			0.f,
-			0,
-			1.f
-		);
+		Echo.Age += DeltaTime;
 
-		if (Echo.CurrentRadius >= Echo.MaxRadius)
+		if (Echo.LifeTime > KINDA_SMALL_NUMBER)
+		{
+			float Progress = FMath::Clamp(Echo.Age / Echo.LifeTime, 0.0f, 1.0f);
+			Echo.CurrentRadius = FMath::Lerp(0.0f, Echo.MaxRadius, Progress);
+		}
+		else
+		{
+			Echo.CurrentRadius += Echo.Speed * DeltaTime;
+		}
+
+		// フェード係数（寿命後に 1->0）
+		float Alpha = 1.0f;
+		if (Echo.Age > Echo.LifeTime)
+		{
+			if (Echo.FadeTime > KINDA_SMALL_NUMBER)
+			{
+				Alpha = 1.0f - FMath::Clamp((Echo.Age - Echo.LifeTime) / Echo.FadeTime, 0.0f, 1.0f);
+			}
+			else
+			{
+				Alpha = 0.0f;
+			}
+		}
+
+		// 内側半径をフラグで決定:
+		// bInnerRadiusIsTransparent == true  -> InnerRadius は「透明化される半径（中心から透明化が広がる）」: 0 -> MaxRadius
+		// bInnerRadiusIsTransparent == false -> InnerRadius は「不透明な内側半径（中心が残り外側から消える）」: MaxRadius -> 0
+		float InnerRadius = 0.0f;
+		if (Echo.Age > Echo.LifeTime && Echo.FadeTime > KINDA_SMALL_NUMBER)
+		{
+			float FadeProgress = FMath::Clamp((Echo.Age - Echo.LifeTime) / Echo.FadeTime, 0.0f, 1.0f);
+			if (bInnerRadiusIsTransparent)
+			{
+				// 中心から透明化が広がる（中心が先に消える）
+				InnerRadius = FadeProgress * Echo.MaxRadius;
+			}
+			else
+			{
+				// 外から中心へ消える（中心が最後まで残る）
+				InnerRadius = (1.0f - FadeProgress) * Echo.MaxRadius;
+			}
+		}
+
+		MaxAlpha = FMath::Max(MaxAlpha, Alpha);
+		MaxRadius = FMath::Max(MaxRadius, Echo.CurrentRadius);
+		MaxInnerRadius = FMath::Max(MaxInnerRadius, InnerRadius);
+
+		float Weight = Alpha * Echo.CurrentRadius;
+		if (Weight > 0.0f)
+		{
+			WeightedOrigin += Echo.Origin * Weight;
+			TotalWeight += Weight;
+		}
+
+		if (Echo.Age >= (Echo.LifeTime + Echo.FadeTime))
 		{
 			ActiveEchoes.RemoveAt(i);
 		}
 	}
 
+	// Niagara コンポーネント群のクリーンアップ
 	for (int32 i = ActiveEchoComponents.Num() - 1; i >= 0; --i)
 	{
 		UNiagaraComponent* Comp = ActiveEchoComponents[i];
@@ -185,40 +177,36 @@ void AVRCharacter::Tick(float DeltaTime)
 		}
 	}
 
-	if (EchoMPC && ActiveEchoes.Num() > 0)
+	FVector FinalOrigin = GetActorLocation();
+	if (TotalWeight > KINDA_SMALL_NUMBER)
 	{
-		UMaterialParameterCollectionInstance* MPC =
-			GetWorld()->GetParameterCollectionInstance(EchoMPC);
-
-		if (MPC)
-		{
-			const FEcho& Latest = ActiveEchoes.Last();
-
-			MPC->SetVectorParameterValue(
-				TEXT("EchoOrigin"),
-				FLinearColor(Latest.Origin)
-			);
-
-			MPC->SetScalarParameterValue(
-				TEXT("EchoRadius"),
-				Latest.CurrentRadius
-			);
-		}
+		FinalOrigin = WeightedOrigin / TotalWeight;
 	}
-	else if (EchoMPC && ActiveEchoes.Num() == 0)
+	else if (ActiveEchoes.Num() > 0)
 	{
-		UMaterialParameterCollectionInstance* MPC =
-			GetWorld()->GetParameterCollectionInstance(EchoMPC);
+		FinalOrigin = ActiveEchoes.Last().Origin;
+	}
 
+	// スムージング（徐々に薄く/変化させる）
+	SmoothedEchoAlpha = FMath::FInterpTo(SmoothedEchoAlpha, MaxAlpha, DeltaTime, EchoAlphaInterpSpeed);
+	SmoothedEchoRadius = FMath::FInterpTo(SmoothedEchoRadius, MaxRadius, DeltaTime, EchoRadiusInterpSpeed);
+	SmoothedEchoInnerRadius = FMath::FInterpTo(SmoothedEchoInnerRadius, MaxInnerRadius, DeltaTime, EchoInnerInterpSpeed);
+	SmoothedEchoOrigin = FMath::VInterpTo(SmoothedEchoOrigin, FinalOrigin, DeltaTime, EchoRadiusInterpSpeed);
+
+	// ポストプロセス用にセット（スムースされた値）
+	if (EchoMPC)
+	{
+		UMaterialParameterCollectionInstance* MPC = GetWorld()->GetParameterCollectionInstance(EchoMPC);
 		if (MPC)
 		{
-			MPC->SetScalarParameterValue(
-				TEXT("EchoRadius"),
-				0.f
-			);
+			MPC->SetVectorParameterValue(TEXT("EchoOrigin"), FLinearColor(SmoothedEchoOrigin));
+			MPC->SetScalarParameterValue(TEXT("EchoRadius"), SmoothedEchoRadius);         // 外側の表現
+			MPC->SetScalarParameterValue(TEXT("EchoInnerRadius"), SmoothedEchoInnerRadius); // 中心から透明化する内側半径
+			MPC->SetScalarParameterValue(TEXT("EchoAlpha"), SmoothedEchoAlpha);
 		}
 	}
 }
+
 void AVRCharacter::EmitEcho(const FInputActionValue& Value)
 {
 	TriggerEchoAt(GetActorLocation(), MaxEchoRadius);

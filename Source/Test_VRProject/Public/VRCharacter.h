@@ -13,11 +13,10 @@
 #include "NiagaraSystem.h"
 #include "VRCharacter.generated.h"
 
-
 class UMaterialInterface;
 class UNiagaraSystem;
-class UInputAction;
 class UNiagaraComponent;
+class UInputAction;
 
 struct FInputActionValue;
 
@@ -32,16 +31,33 @@ struct FEcho
 	UPROPERTY()
 	float CurrentRadius = 0.f;
 
-	UPROPERTY(EditAnywhere, Category = "Echo")
+	UPROPERTY()
 	float MaxRadius = 1000.f;
 
-	UPROPERTY(EditAnywhere, Category = "Echo")
+	UPROPERTY()
 	float Speed = 2000.f;
+
+	UPROPERTY()
+	float Age = 0.f;
+
+	UPROPERTY()
+	float LifeTime = 1.f;
+
+	UPROPERTY()
+	float FadeTime = 0.5f;
+
+	TWeakObjectPtr<UNiagaraComponent> NiagaraComp;
 
 	FEcho() = default;
 
-	FEcho(const FVector& InOrigin, float InMaxRadius, float InSpeed)
-		: Origin(InOrigin), CurrentRadius(0.f), MaxRadius(InMaxRadius), Speed(InSpeed)
+	FEcho(const FVector& InOrigin, float InMaxRadius, float InSpeed, float InFadeTime = 0.5f)
+		: Origin(InOrigin)
+		, CurrentRadius(0.f)
+		, MaxRadius(InMaxRadius)
+		, Speed(InSpeed)
+		, Age(0.f)
+		, LifeTime((InSpeed > 0.f) ? (InMaxRadius / InSpeed) : 1.f)
+		, FadeTime(InFadeTime)
 	{}
 };
 
@@ -52,13 +68,10 @@ class TEST_VRPROJECT_API AVRCharacter : public ACharacter
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
 	AVRCharacter();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
@@ -70,21 +83,16 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Echo")
 	UMaterialParameterCollection* EchoMPC;
 
-	// Niagara エフェクト（各エコーごとにスポーンする）
 	UPROPERTY(EditAnywhere, Category = "Echo")
 	UNiagaraSystem* EchoNiagara;
 
+	UPROPERTY(EditAnywhere, Category = "Echo", meta = (ClampMin = "0.0"))
+	float GlobalEchoFadeTime = 0.5f;
+
 	void EmitEcho(const FInputActionValue& Value);
 
-public:	
-	// Called every frame
+public:
 	virtual void Tick(float DeltaTime) override;
-
-	// 旧来のフラグは残すが、実際の拡張は ActiveEchoes が担当
-	bool bEchoActive = false;
-
-	UPROPERTY(EditAnywhere, Category = "Echo")
-	float CurrentEchoRadius = 0.f;
 
 	UPROPERTY(EditAnywhere, Category = "Echo")
 	float MaxEchoRadius = 1000.f;
@@ -92,12 +100,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Echo")
 	float EchoSpeed = 2000.f;
 
-	UPROPERTY()
-	TSet<UStaticMeshComponent*> RevealedMeshes;
-
-	FVector EchoOrigin;
-
-	// --- 歩行エコー設定 ---
+	// 歩行エコー設定
 	UPROPERTY(EditAnywhere, Category = "Echo")
 	float WalkEchoInterval = 0.5f;
 
@@ -108,17 +111,35 @@ public:
 	float WalkEchoRadius = 400.f;
 
 private:
-	// 歩行エコー用タイマー
 	float WalkEchoTimer = 0.f;
 
-	// 現在アクティブなエコー群
 	UPROPERTY()
 	TArray<FEcho> ActiveEchoes;
 
-	// 各エコー用の Niagara コンポーネント群（視覚的に重ねるため保持）
 	UPROPERTY()
-	TArray<UNiagaraComponent*> ActiveEchoComponents;
+	TArray<TObjectPtr<UNiagaraComponent>> ActiveEchoComponents;
 
-	// エコーを新規追加するユーティリティ
+	// ポストプロセス用スムージング
+	UPROPERTY(EditAnywhere, Category = "Echo", meta = (ClampMin = "0.0"))
+	float EchoAlphaInterpSpeed = 6.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Echo", meta = (ClampMin = "0.0"))
+	float EchoRadiusInterpSpeed = 6.0f;
+
+	// 中心から消えていくための内側半径スムース速度
+	UPROPERTY(EditAnywhere, Category = "Echo", meta = (ClampMin = "0.0"))
+	float EchoInnerInterpSpeed = 6.0f;
+
+	// true: EchoInnerRadius は「透明化される内側半径」（中心から透明化が広がる）
+	// false: EchoInnerRadius は「不透明な内側半径」（中心が残り、外側から消える）
+	UPROPERTY(EditAnywhere, Category = "Echo")
+	bool bInnerRadiusIsTransparent = true;
+
+	// 内部スムース状態
+	float SmoothedEchoAlpha = 0.0f;
+	float SmoothedEchoRadius = 0.0f;
+	float SmoothedEchoInnerRadius = 0.0f;
+	FVector SmoothedEchoOrigin = FVector::ZeroVector;
+
 	void TriggerEchoAt(const FVector& Location, float Radius);
 };
