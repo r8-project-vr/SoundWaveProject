@@ -9,7 +9,7 @@
 #include "EnhancedInputComponent.h"
 #include "InputActionValue.h"
 #include "NiagaraFunctionLibrary.h"
-#include "NiagaraComponent.h" // ← 追加
+#include "NiagaraComponent.h"
 
 // Sets default values
 AVRCharacter::AVRCharacter()
@@ -74,9 +74,8 @@ void AVRCharacter::TriggerEchoAt(const FVector& Location, float Radius)
 		}
 	}
 
-	// 追補的にデバッグ球を描画（寿命を波の到達時間と合わせる）
 	const float LifeTime = (EchoSpeed > 0.f) ? (Radius / EchoSpeed) : 1.f;
-	DrawDebugSphere(
+	/*DrawDebugSphere(
 		GetWorld(),
 		Location,
 		Radius,
@@ -84,7 +83,7 @@ void AVRCharacter::TriggerEchoAt(const FVector& Location, float Radius)
 		FColor::Green,
 		false,
 		LifeTime
-	);
+	);*/
 
 	// 既存のログ/当たり判定は発生時点で実行（従来の EmitEcho と同様）
 	TArray<AActor*> Actors;
@@ -149,13 +148,12 @@ void AVRCharacter::Tick(float DeltaTime)
 		WalkEchoTimer = 0.f;
 	}
 
-	// アクティブな全エコーを更新（後ろから削除して安全に配列を編集）
 	for (int32 i = ActiveEchoes.Num() - 1; i >= 0; --i)
 	{
 		FEcho& Echo = ActiveEchoes[i];
 		Echo.CurrentRadius += Echo.Speed * DeltaTime;
 
-		// 各エコーの視覚化（毎フレーム短時間描画）。Niagara があればそれで見た目は出るため補助的。
+		// 各エコーの視覚化
 		DrawDebugSphere(
 			GetWorld(),
 			Echo.Origin,
@@ -174,7 +172,6 @@ void AVRCharacter::Tick(float DeltaTime)
 		}
 	}
 
-	// ActiveEchoComponents の後始末（Niagara が再生終了したら破棄）
 	for (int32 i = ActiveEchoComponents.Num() - 1; i >= 0; --i)
 	{
 		UNiagaraComponent* Comp = ActiveEchoComponents[i];
