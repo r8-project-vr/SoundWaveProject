@@ -37,6 +37,13 @@ void AEnemyAIController::BeginPlay()
 	MoveToNextPoint();
 }
 
+void AEnemyAIController::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	ChackPlayer();
+}
+
 void AEnemyAIController::MoveToNextPoint()
 {
 	AEnemeyCharacter* Enemy =
@@ -73,6 +80,9 @@ void AEnemyAIController::MoveToNextPoint()
 	if (Enemy->Patrolpoints.Num() == 0)
 		return;
 
+	if (bMovinToPlayerPoint)
+		return;
+
 	//デバック用--------------------------------------------------------------------
 
 	UE_LOG(
@@ -94,7 +104,7 @@ void AEnemyAIController::MoveToNextPoint()
 	const EPathFollowingRequestResult::Type Result =
 		MoveToActor(
 			Enemy->Patrolpoints[CurrentIndex],
-			100.f //受け入れ半径
+			DistanceToPlayer //受け入れ半径
 		);
 
 	//デバック用--------------------------------------------------------------------
@@ -138,8 +148,19 @@ void AEnemyAIController::OnMoveCompleted(
 	FRandomStream RandomStream;
 	RandomStream.GenerateNewSeed();
 
-	//次のポイントの決定
-	CurrentIndex = RandomStream.RandRange(0, Enemy->Patrolpoints.Num() - 1);
+	int32 NewIndex;
+
+	do {
+		//次のポイントの決定
+		NewIndex = RandomStream.RandRange(0, Enemy->Patrolpoints.Num() - 1);
+
+	} while (
+		//もし移動先が変わらなかったら、もう一度繰り返す
+		Enemy->Patrolpoints.Num() > 1 &&
+		NewIndex == CurrentIndex
+		);
+
+	CurrentIndex = NewIndex;
 
 	//デバック用--------------------------------------------------------------------
 
@@ -157,12 +178,65 @@ void AEnemyAIController::OnMoveCompleted(
 		CurrentIndex = 0;
 	}
 
+	if (bMovinToPlayerPoint)
+	{
+		bMovinToPlayerPoint = false;
+	}
+
 	GetWorld()->GetTimerManager().SetTimer(
 		PatrolTimerHandle,
 		this,
 		&AEnemyAIController::MoveToNextPoint,
-		0.5f,      //待機時間
+		1.0f,      //待機時間
 		false
 	);
+}
+
+
+void AEnemyAIController::ChackPlayer()
+{
+	AEnemeyCharacter* Enemy =
+		Cast<AEnemeyCharacter>(GetPawn());
+
+	if (!Enemy) { return; }
+	if (!Enemy->PlayerPoint) { return; }
+
+	//Playerのポイントまでの距離を取得
+	float Distance =
+		FVector::Dist(
+			GetPawn()->GetActorLocation(),
+			Enemy->PlayerPoint->GetActorLocation()
+		);
+
+
+
+	//Playerが特定の範囲に入ったら追跡
+	if (Distance < 500.f&&!bMovinToPlayerPoint)
+	{
+		bMovinToPlayerPoint = true;
+
+		MoveToActor(
+			Enemy->PlayerPoint,
+			DistanceToPlayer);
+
+		if (GetMoveStatus() == EPathFollowingStatus::Idle) {
+			//デバック用--------------------------------------------------------------------
+
+			UE_LOG(
+				LogTemp,
+				Warning,
+				TEXT("プレイヤーを捕まえました")
+			);
+			//_______________________________________________________________________________
+		}
+	}
+	else
+	{
+		//Playerが範囲外に出たらパトロール再開
+		if (GetMoveStatus() != EPathFollowingStatus::Moving)
+		{
+			bMovinToPlayerPoint = false;
+		}
+	}
 }
 
