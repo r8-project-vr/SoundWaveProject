@@ -9,11 +9,12 @@
 #include "EnhancedInputComponent.h"
 #include "InputActionValue.h"
 #include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
 
 // Sets default values
 AVRCharacter::AVRCharacter()
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 }
@@ -50,88 +51,47 @@ void AVRCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	}
 }
 
-// Called every frame
-void AVRCharacter::Tick(float DeltaTime)
+void AVRCharacter::TriggerEchoAt(const FVector& Location, float Radius)
 {
-	Super::Tick(DeltaTime);
+	// 新しいエコーを配列に追加（既存は上書きされない）
+	ActiveEchoes.Add(FEcho(Location, Radius, EchoSpeed));
 
-	if (!bEchoActive)
+	// 各エコーごとに視覚的エフェクトをスポーン（重なって表示される）
+	if (EchoNiagara)
 	{
-		return;
-	}
+		UNiagaraComponent* Comp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			GetWorld(),
+			EchoNiagara,
+			Location
+		);
 
-	CurrentEchoRadius += EchoSpeed * DeltaTime;
-
-	if (CurrentEchoRadius >= MaxEchoRadius)
-	{
-		bEchoActive = false;
-
-		CurrentEchoRadius = 0.f;
-
-		if (EchoMPC)
+		if (Comp)
 		{
-			UMaterialParameterCollectionInstance* MPC =
-				GetWorld()->GetParameterCollectionInstance(EchoMPC);
+			// オプション：Niagara にパラメータを渡すならここで行う
+			// Comp->SetVariableFloat("User.EchoMaxRadius", Radius); // Niagara 側で User.EchoMaxRadius を作る場合など
 
-			if (MPC)
-			{
-				MPC->SetScalarParameterValue(
-					TEXT("EchoRadius"),
-					0.f
-				);
-			}
-		}
-
-		return;
-	}
-
-	if (EchoMPC)
-	{
-		UMaterialParameterCollectionInstance* MPC =
-			GetWorld()->GetParameterCollectionInstance(EchoMPC);
-
-		if (MPC)
-		{
-			MPC->SetVectorParameterValue(
-				TEXT("EchoOrigin"),
-				FLinearColor(EchoOrigin)
-			);
-
-			MPC->SetScalarParameterValue(
-				TEXT("EchoRadius"),
-				CurrentEchoRadius
-			);
+			ActiveEchoComponents.Add(Comp);
 		}
 	}
-}
-void AVRCharacter::EmitEcho(const FInputActionValue& Value)
-{
-	EchoOrigin = GetActorLocation();
 
-	CurrentEchoRadius = 0.f;
-
-	bEchoActive = true;
-	const float EchoRadius = 1000.f;
-	const float WaveSpeed = 2000.f;
-
-	DrawDebugSphere(
+	const float LifeTime = (EchoSpeed > 0.f) ? (Radius / EchoSpeed) : 1.f;
+	/*DrawDebugSphere(
 		GetWorld(),
-		GetActorLocation(),
-		EchoRadius,
+		Location,
+		Radius,
 		32,
 		FColor::Green,
 		false,
-		2.f
-	);
+		LifeTime
+	);*/
 
+	// 既存のログ/当たり判定は発生時点で実行（従来の EmitEcho と同様）
 	TArray<AActor*> Actors;
-
 	UGameplayStatics::GetAllActorsWithTag(
 		GetWorld(),
 		FName("EchoObject"),
 		Actors
 	);
-
 
 	for (AActor* Actor : Actors)
 	{
@@ -142,11 +102,11 @@ void AVRCharacter::EmitEcho(const FInputActionValue& Value)
 
 		float Distance =
 			FVector::Distance(
-				GetActorLocation(),
+				Location,
 				Actor->GetActorLocation()
 			);
 
-		if (Distance > EchoRadius)
+		if (Distance > Radius)
 		{
 			continue;
 		}
@@ -172,4 +132,94 @@ void AVRCharacter::EmitEcho(const FInputActionValue& Value)
 			TEXT("Echo!")
 		);
 	}
+}
+
+// Called every frame
+void AVRCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	// --- 歩行検出（常にチェック） ---
+	WalkEchoTimer += DeltaTime;
+	const float Speed = GetVelocity().Size();
+	if (Speed > WalkEchoVelocityThreshold && WalkEchoTimer >= WalkEchoInterval)
+	{
+		TriggerEchoAt(GetActorLocation(), WalkEchoRadius);
+		WalkEchoTimer = 0.f;
+	}
+
+	for (int32 i = ActiveEchoes.Num() - 1; i >= 0; --i)
+	{
+		FEcho& Echo = ActiveEchoes[i];
+		Echo.CurrentRadius += Echo.Speed * DeltaTime;
+
+		// 各エコーの視覚化
+		DrawDebugSphere(
+			GetWorld(),
+			Echo.Origin,
+			Echo.CurrentRadius,
+			24,
+			FColor::Green,
+			false,
+			0.f,
+			0,
+			1.f
+		);
+
+		if (Echo.CurrentRadius >= Echo.MaxRadius)
+		{
+			ActiveEchoes.RemoveAt(i);
+		}
+	}
+
+	for (int32 i = ActiveEchoComponents.Num() - 1; i >= 0; --i)
+	{
+		UNiagaraComponent* Comp = ActiveEchoComponents[i];
+		if (!Comp || !Comp->IsValidLowLevel() || !Comp->IsActive())
+		{
+			if (Comp)
+			{
+				Comp->DestroyComponent();
+			}
+			ActiveEchoComponents.RemoveAt(i);
+		}
+	}
+
+	if (EchoMPC && ActiveEchoes.Num() > 0)
+	{
+		UMaterialParameterCollectionInstance* MPC =
+			GetWorld()->GetParameterCollectionInstance(EchoMPC);
+
+		if (MPC)
+		{
+			const FEcho& Latest = ActiveEchoes.Last();
+
+			MPC->SetVectorParameterValue(
+				TEXT("EchoOrigin"),
+				FLinearColor(Latest.Origin)
+			);
+
+			MPC->SetScalarParameterValue(
+				TEXT("EchoRadius"),
+				Latest.CurrentRadius
+			);
+		}
+	}
+	else if (EchoMPC && ActiveEchoes.Num() == 0)
+	{
+		UMaterialParameterCollectionInstance* MPC =
+			GetWorld()->GetParameterCollectionInstance(EchoMPC);
+
+		if (MPC)
+		{
+			MPC->SetScalarParameterValue(
+				TEXT("EchoRadius"),
+				0.f
+			);
+		}
+	}
+}
+void AVRCharacter::EmitEcho(const FInputActionValue& Value)
+{
+	TriggerEchoAt(GetActorLocation(), MaxEchoRadius);
 }
