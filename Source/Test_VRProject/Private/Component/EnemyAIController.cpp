@@ -37,6 +37,45 @@ void AEnemyAIController::BeginPlay()
 	MoveToNextPoint();
 }
 
+void AEnemyAIController::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	AEnemeyCharacter* Enemy =
+		Cast<AEnemeyCharacter>(GetPawn());
+
+	if (!Enemy) { return; }
+	if (!Enemy->PlayerPoint) { return; }
+
+	//Playerのポイントまでの距離を取得
+	float Distance =
+		FVector::Dist(
+			GetPawn()->GetActorLocation(),
+			Enemy->PlayerPoint->GetActorLocation()
+		);
+
+
+
+	//Playerが特定の範囲に入ったら追跡
+	if (Distance < 500.f)
+	{
+		MoveToActor(
+			Enemy->PlayerPoint,
+			100.f);
+
+		bMovinToPlayerPoint = true;
+	}
+	else
+	{
+		//Playerが範囲外に出たらパトロール再開
+		if (GetMoveStatus() != EPathFollowingStatus::Moving)
+		{
+			bMovinToPlayerPoint = true;
+			MoveToNextPoint();
+		}
+	}
+}
+
 void AEnemyAIController::MoveToNextPoint()
 {
 	AEnemeyCharacter* Enemy =
@@ -71,6 +110,9 @@ void AEnemyAIController::MoveToNextPoint()
 		return;
 
 	if (Enemy->Patrolpoints.Num() == 0)
+		return;
+
+	if (bMovinToPlayerPoint)
 		return;
 
 	//デバック用--------------------------------------------------------------------
@@ -132,6 +174,9 @@ void AEnemyAIController::OnMoveCompleted(
 		return;
 
 	if (Enemy->Patrolpoints.Num() == 0)
+		return;
+
+	if (bMovinToPlayerPoint)
 		return;
 
 	//ランダムシード値の決定

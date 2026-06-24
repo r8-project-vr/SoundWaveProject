@@ -28,6 +28,11 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	//移動用Pointの宣言
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite)
 	TArray<AEnemyPatrolPoint*> Patrolpoints;
+
+	//Player用のPointの宣言
+	UPROPERTY(EditInstanceOnly, BlueprintReadWrite)
+	AEnemyPatrolPoint* PlayerPoint;
 };
