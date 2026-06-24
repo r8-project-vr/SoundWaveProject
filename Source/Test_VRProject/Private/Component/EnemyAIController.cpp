@@ -10,25 +10,6 @@
 
 void AEnemyAIController::BeginPlay()
 {
-	//デバック用----------------------------------------------
-	AEnemeyCharacter* Enemy =
-		Cast<AEnemeyCharacter>(GetPawn());
-
-	if (!Enemy)
-	{
-		UE_LOG(LogTemp, Error, TEXT("Enemy nullptr"));
-		return;
-	}
-
-	UE_LOG(LogTemp, Warning,
-		TEXT("Enemy=%s"),
-		*Enemy->GetName());
-
-	UE_LOG(LogTemp, Warning,
-		TEXT("Pawn=%s"),
-		*GetPawn()->GetName());
-	//_______________________________________________________
-
 	Super::BeginPlay();
 
 	//次移動する場所
@@ -83,35 +64,12 @@ void AEnemyAIController::MoveToNextPoint()
 	if (bMovinToPlayerPoint)
 		return;
 
-	//デバック用--------------------------------------------------------------------
-
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("Enemy Pos = %s"),
-		*GetPawn()->GetActorLocation().ToString()
-	);
-
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("Target Pos = %s"),
-		*Point->GetActorLocation().ToString()
-	);
-	//______________________________________________________________________________
-
 	//移動先のポイントに近づける距離
 	const EPathFollowingRequestResult::Type Result =
 		MoveToActor(
 			Enemy->Patrolpoints[CurrentIndex],
 			DistanceToPlayer //受け入れ半径
 		);
-
-	//デバック用--------------------------------------------------------------------
-	UE_LOG(LogTemp, Warning,
-		TEXT("Move Result = %d"),
-		(int32)Result);
-	//_____________________________________________________________________________
 }
 
 void AEnemyAIController::OnMoveCompleted(
@@ -120,18 +78,15 @@ void AEnemyAIController::OnMoveCompleted(
 {
 	Super::OnMoveCompleted(RequestID, Result);
 
-	//デバック用-------------------------------------------------------------------
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("OnMoveCompleted Result=%d"),
-		(int32)Result.Code
-	);
-	//_____________________________________________________________________________
-
 	// 成功時だけ次へ
 	if (Result.Code != EPathFollowingResult::Success)
 	{
+		return;
+	}
+
+	if (bMovinToPlayerPoint)
+	{
+		EnemyAttack();
 		return;
 	}
 
@@ -195,6 +150,9 @@ void AEnemyAIController::OnMoveCompleted(
 
 void AEnemyAIController::ChackPlayer()
 {
+	if(bAttacking){ return; }
+	if(!bCanDetectPlayer) { return; }
+
 	AEnemeyCharacter* Enemy =
 		Cast<AEnemeyCharacter>(GetPawn());
 
@@ -208,8 +166,6 @@ void AEnemyAIController::ChackPlayer()
 			Enemy->PlayerPoint->GetActorLocation()
 		);
 
-
-
 	//Playerが特定の範囲に入ったら追跡
 	if (Distance < 500.f&&!bMovinToPlayerPoint)
 	{
@@ -218,17 +174,24 @@ void AEnemyAIController::ChackPlayer()
 		MoveToActor(
 			Enemy->PlayerPoint,
 			DistanceToPlayer);
+	}
+	else if (Distance >700.f && bMovinToPlayerPoint)
+	{
+		//デバック用--------------------------------------------------------------------
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("プレイヤーから離れました")
+		);
+		//_______________________________________________________________________________
 
-		if (GetMoveStatus() == EPathFollowingStatus::Idle) {
-			//デバック用--------------------------------------------------------------------
+		StopMovement();
 
-			UE_LOG(
-				LogTemp,
-				Warning,
-				TEXT("プレイヤーを捕まえました")
-			);
-			//_______________________________________________________________________________
-		}
+		bMovinToPlayerPoint = false;
+
+		bCanDetectPlayer = false;
+
+		MoveToNextPoint();
 	}
 	else
 	{
@@ -240,3 +203,49 @@ void AEnemyAIController::ChackPlayer()
 	}
 }
 
+void AEnemyAIController::EnemyAttack()
+{
+	if (bAttacking)
+	{
+		return;
+	}
+
+	bAttacking = true;
+	bCanDetectPlayer = false;
+
+	//デバック用--------------------------------------------------------------------
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("プレイヤーを捕まえました")
+	);
+	//_______________________________________________________________________________
+
+	GetWorld()->GetTimerManager().SetTimer(
+		PatrolTimerHandle,
+		this,
+		&AEnemyAIController::ReturnToPatrol,
+		2.0f,//離れるまでの時間
+		false
+	);
+}
+
+void AEnemyAIController::ReturnToPatrol()
+{
+	bMovinToPlayerPoint = false;
+	bAttacking = false;
+
+	MoveToNextPoint();
+	
+	GetWorld()->GetTimerManager().SetTimer(
+		DetectTimerHandle,
+		[this]()
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Playerを捕まえられるようになりました"));
+			bCanDetectPlayer = true;
+		},
+		5.0f,//次の検知までの時間
+		false
+	);
+}

@@ -24,14 +24,17 @@ public:
 	//次に移動するポイントのインデックス
 	int32 CurrentIndex = 0;
 
-	//playerまでの距離
+	//playerまでの判定距離
 	float DistanceToPlayer = 100.0f;
 
 	//playerを見つけたかどうかのフラグ
 	bool bMovinToPlayerPoint = false;
 
 	//playerを捕まえたかどうかのフラグ
-	bool CatchPlayer;
+	bool bAttacking=false;
+
+	//距離を取ったかどうかの処理
+	bool bCanDetectPlayer = true;
 
 	//次のポイントに移動する関数
 	void MoveToNextPoint();
@@ -39,8 +42,14 @@ public:
 	//Playerのポイントを探し、見つけたら移動する関数
 	void ChackPlayer();
 
+	//攻撃処理
+	void EnemyAttack();
+
+	//パトロールに戻る処理
+	void ReturnToPatrol();
+
 private:
 
 	FTimerHandle PatrolTimerHandle;
-
+	FTimerHandle DetectTimerHandle;
 };
