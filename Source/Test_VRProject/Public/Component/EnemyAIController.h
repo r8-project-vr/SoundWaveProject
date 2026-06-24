@@ -24,10 +24,20 @@ public:
 	//次に移動するポイントのインデックス
 	int32 CurrentIndex = 0;
 
+	//playerまでの距離
+	float DistanceToPlayer = 100.0f;
+
+	//playerを見つけたかどうかのフラグ
 	bool bMovinToPlayerPoint = false;
+
+	//playerを捕まえたかどうかのフラグ
+	bool CatchPlayer;
 
 	//次のポイントに移動する関数
 	void MoveToNextPoint();
+
+	//Playerのポイントを探し、見つけたら移動する関数
+	void ChackPlayer();
 
 private:
 
