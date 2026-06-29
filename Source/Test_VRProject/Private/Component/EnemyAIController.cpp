@@ -7,15 +7,81 @@
 #include "TimerManager.h"                       //時間関係
 #include "Math/RandomStream.h"                  //ランダム関係
 #include "Navigation/PathFollowingComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 void AEnemyAIController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	//次移動する場所
-	CurrentIndex = 0;
+	AEnemeyCharacter* Enemy =
+		Cast<AEnemeyCharacter>(GetPawn());
 
+	CurrentIndex;
+
+	Enemy->GetCharacterMovement()->MaxWalkSpeed = PatrolMoveSpeed;
 	MoveToNextPoint();
+
+	//デバック用--------------------------------------------------------------------
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("-初期設定----------------------------")
+	);
+
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("ポイントのインデックス(初期化)=%d"),
+		CurrentIndex
+	);
+
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("playerまでの判定距離=%f"),
+		DistanceToPlayer
+	);
+
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("待機時間=%f"),
+		WaitTime
+	);
+
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("離れるまでの時間=%f"),
+		ToLeaveTime
+	);
+
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("次の検知までの時間=%f"),
+		DetectionTime
+	);
+
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("巡回時の移動速度=%f"),
+		PatrolMoveSpeed
+	);
+
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("追跡時の移動速度=%f"),
+		TrackingMoveSpeed
+	);
+
+	UE_LOG(
+		LogTemp,
+		Display,
+		TEXT("---------------------------------")
+	);
 }
 
 void AEnemyAIController::Tick(float DeltaTime)
@@ -31,10 +97,11 @@ void AEnemyAIController::MoveToNextPoint()
 		Cast<AEnemeyCharacter>(GetPawn());
 
 	//デバック用--------------------------------------------------------------------
+	//現在のインデックスを表示
 	UE_LOG(
 		LogTemp,
-		Warning,
-		TEXT("CurrentIndex=%d"),
+		Display,
+		TEXT("NowCurrentIndex=%d"),
 		CurrentIndex
 	);
 
@@ -44,13 +111,13 @@ void AEnemyAIController::MoveToNextPoint()
 		return;
 	}
 
-	UE_LOG(LogTemp, Warning,
+	UE_LOG(LogTemp, Display,
 		TEXT("Pawn Location = %s"),
 		*GetPawn()->GetActorLocation().ToString());
 
 	AEnemyPatrolPoint* Point = Enemy->Patrolpoints[CurrentIndex];
 
-	UE_LOG(LogTemp, Warning,
+	UE_LOG(LogTemp, Display,
 		TEXT("Target Location = %s"),
 		*Point->GetActorLocation().ToString());
 	//______________________________________________________________________________
@@ -118,11 +185,11 @@ void AEnemyAIController::OnMoveCompleted(
 	CurrentIndex = NewIndex;
 
 	//デバック用--------------------------------------------------------------------
-
+	//次移動するインデックスを表示
 	UE_LOG(
 		LogTemp,
-		Warning,
-		TEXT("CurrentIndex = %d"),
+		Display,
+		TEXT("NextCurrentIndex = %d"),
 		CurrentIndex
 	);
 	//_______________________________________________________________________________
@@ -142,7 +209,7 @@ void AEnemyAIController::OnMoveCompleted(
 		PatrolTimerHandle,
 		this,
 		&AEnemyAIController::MoveToNextPoint,
-		1.0f,      //待機時間
+		WaitTime,
 		false
 	);
 }
@@ -171,6 +238,8 @@ void AEnemyAIController::ChackPlayer()
 	{
 		bMovinToPlayerPoint = true;
 
+		Enemy->GetCharacterMovement()->MaxWalkSpeed = TrackingMoveSpeed;
+
 		MoveToActor(
 			Enemy->PlayerPoint,
 			DistanceToPlayer);
@@ -180,7 +249,7 @@ void AEnemyAIController::ChackPlayer()
 		//デバック用--------------------------------------------------------------------
 		UE_LOG(
 			LogTemp,
-			Warning,
+			Display,
 			TEXT("プレイヤーから離れました")
 		);
 		//_______________________________________________________________________________
@@ -191,6 +260,7 @@ void AEnemyAIController::ChackPlayer()
 
 		bCanDetectPlayer = false;
 
+		Enemy->GetCharacterMovement()->MaxWalkSpeed = PatrolMoveSpeed;
 		MoveToNextPoint();
 	}
 	else
@@ -226,7 +296,7 @@ void AEnemyAIController::EnemyAttack()
 		PatrolTimerHandle,
 		this,
 		&AEnemyAIController::ReturnToPatrol,
-		2.0f,//離れるまでの時間
+		ToLeaveTime,
 		false
 	);
 }
@@ -236,16 +306,22 @@ void AEnemyAIController::ReturnToPatrol()
 	bMovinToPlayerPoint = false;
 	bAttacking = false;
 
+	AEnemeyCharacter* Enemy =
+		Cast<AEnemeyCharacter>(GetPawn());
+
+	Enemy->GetCharacterMovement()->MaxWalkSpeed = PatrolMoveSpeed;
 	MoveToNextPoint();
 	
 	GetWorld()->GetTimerManager().SetTimer(
 		DetectTimerHandle,
 		[this]()
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Playerを捕まえられるようになりました"));
+			UE_LOG(LogTemp, 
+				Warning,
+				TEXT("Playerを捕まえられるようになりました"));
 			bCanDetectPlayer = true;
 		},
-		5.0f,//次の検知までの時間
+		DetectionTime,
 		false
 	);
 }
