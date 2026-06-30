@@ -8,35 +8,50 @@
 class UMaterialParameterCollection;
 class UNiagaraSystem;
 
+/// <summary>
+/// 音波の情報を保持する構造体
+/// </summary>
 USTRUCT(BlueprintType)
 struct FEcho
 {
 	GENERATED_BODY()
 
+	// 音波の発生位置
 	UPROPERTY()
 	FVector Origin = FVector::ZeroVector;
 
+	// 現在の音波半径
 	UPROPERTY()
 	float CurrentRadius = 0.f;
 
+	// 音波が広がる最大半径
 	UPROPERTY()
 	float MaxRadius = 1000.f;
 
+	// 音波が広がる速度(cm/s)
 	UPROPERTY()
 	float Speed = 2000.f;
 
+	// 音波が発生してからの経過時間
 	UPROPERTY()
 	float Age = 0.f;
 
+	// 音波が広がり切るまでの時間
 	UPROPERTY()
 	float LifeTime = 1.f;
 
+	// 音波が消えるまでのフェード時間
 	UPROPERTY()
 	float FadeTime = 0.5f;
 
+	// この音波に対応するNiagaraコンポーネント　※今のところは使用していない
 	TWeakObjectPtr<UNiagaraComponent> NiagaraComp;
 };
 
+/// <summary>
+/// 音波の生成・更新・削除を管理するコンポーネント
+/// ポストプロセスへ値を渡し、音波を制御する
+/// </summary>
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class TEST_VRPROJECT_API UEchoComponent : public UActorComponent
 {
@@ -46,11 +61,7 @@ public:
 	UEchoComponent();
 
 	virtual void BeginPlay() override;
-	virtual void TickComponent(
-		float DeltaTime,
-		ELevelTick TickType,
-		FActorComponentTickFunction* ThisTickFunction
-	) override;
+	virtual void TickComponent(float DeltaTime,ELevelTick TickType,FActorComponentTickFunction* ThisTickFunction) override;
 
 	UFUNCTION(BlueprintCallable)
 	void EmitEcho(
@@ -58,45 +69,55 @@ public:
 		float Radius);
 
 protected:
-
+	// ポストプロセスへ値を渡すマテリアルのパラメータコレクション
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Echo")
 	UMaterialParameterCollection* EchoMPC;
 
+	// 音波のNiagaraエフェクト
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Echo")
 	UNiagaraSystem* EchoNiagara;
 
+	// 音波の広がる速度
 	UPROPERTY(EditAnywhere)
 	float EchoSpeed = 2000.f;
 
+	// 音波が消えるまでの時間
 	UPROPERTY(EditAnywhere)
 	float GlobalEchoFadeTime = 0.5f;
-
 private:
-
+	// 現在存在している音波
 	TArray<FEcho> ActiveEchoes;
 
+	// 再生中のNiagaraコンポーネント
 	TArray<TObjectPtr<UNiagaraComponent>> ActiveEchoComponents;
 
-	// ポストプロセス用スムージング
+	// ポストプロセスのAlpha値を滑らかに補間する速度
 	UPROPERTY(EditAnywhere)
 	float EchoAlphaInterpSpeed = 6.0f;
 
+	// ポストプロセスの半径を滑らかに補間する速度
 	UPROPERTY(EditAnywhere)
 	float EchoRadiusInterpSpeed = 6.0f;
 
+	// ポストプロセスの内側半径を滑らかに補間する速度
 	UPROPERTY(EditAnywhere)
 	float EchoInnerInterpSpeed = 6.0f;
 
+	// trueなら中心から透明になる
+	// falseなら外側から透明になる
 	UPROPERTY(EditAnywhere)
 	bool bInnerRadiusIsTransparent = true;
 
-	// スムージング状態
+	// ポストプロセスの補間後のAlpha値
 	float SmoothedEchoAlpha = 0.0f;
 
+	// ポストプロセスの補間後のエコー半径
 	float SmoothedEchoRadius = 0.0f;
 
+	// ポストプロセスの補間後の内側半径
 	float SmoothedEchoInnerRadius = 0.0f;
 
+	// ポストプロセスの補間後のエコー中心座標
 	FVector SmoothedEchoOrigin = FVector::ZeroVector;
 
 };
