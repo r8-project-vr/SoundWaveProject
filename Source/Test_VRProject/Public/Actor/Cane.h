@@ -7,8 +7,6 @@
 class UStaticMeshComponent;
 class USphereComponent;
 class UPrimitiveComponent;
-class UEchoComponent;
-class AVRCharacter;
 
 UCLASS(Blueprintable)
 class TEST_VRPROJECT_API ACane : public AActor
@@ -30,9 +28,6 @@ private:
 
 	UPROPERTY(VisibleAnywhere)
 	USphereComponent* TipPoint;
-
-	UPROPERTY()
-	AVRCharacter* OwnerCharacter;
 
 	UPrimitiveComponent* LastHighlighted = nullptr;
 	bool bWasHitLastFrame = false;

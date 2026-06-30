@@ -10,9 +10,7 @@ AVRCharacter::AVRCharacter()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
-	EchoComponent =
-		CreateDefaultSubobject<UEchoComponent>(
-			TEXT("EchoComponent"));
+	EchoComponent = CreateDefaultSubobject<UEchoComponent>(TEXT("EchoComponent"));
 }
 
 void AVRCharacter::BeginPlay()
@@ -23,8 +21,7 @@ void AVRCharacter::BeginPlay()
 	{
 		if (ULocalPlayer* LocalPlayer = PC->GetLocalPlayer())
 		{
-			if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
-				LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+			if (UEnhancedInputLocalPlayerSubsystem* Subsystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
 			{
 				Subsystem->AddMappingContext(DefaultMappingContext, 0);
 			}
@@ -37,6 +34,22 @@ void AVRCharacter::BeginPlay()
 
 		if (Cane)
 		{
+			UE_LOG(
+				LogTemp,
+				Warning,
+				TEXT("Spawned Cane = %s"),
+				*Cane->GetName());
+
+			Cane->SetOwner(this);
+
+			UE_LOG(
+				LogTemp,
+				Warning,
+				TEXT("After SetOwner = %s"),
+				Cane->GetOwner()
+				? *Cane->GetOwner()->GetName()
+				: TEXT("NULL"));
+
 			Cane->AttachToComponent(
 				GetMesh(),
 				FAttachmentTransformRules::SnapToTargetIncludingScale,
@@ -58,8 +71,7 @@ void AVRCharacter::Tick(float DeltaTime)
 
 	const float Speed = GetVelocity().Size();
 
-	if (Speed > WalkEchoVelocityThreshold &&
-		WalkEchoTimer >= WalkEchoInterval)
+	if (Speed > WalkEchoVelocityThreshold && WalkEchoTimer >= WalkEchoInterval)
 	{
 		EchoComponent->EmitEcho(
 			GetActorLocation(),
@@ -69,11 +81,11 @@ void AVRCharacter::Tick(float DeltaTime)
 	}
 }
 
-void AVRCharacter::SetupPlayerInputComponent(
-	UInputComponent* PlayerInputComponent)
+void AVRCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
-	if (UEnhancedInputComponent* EnhancedInputComponent =
-		Cast<UEnhancedInputComponent>(PlayerInputComponent))
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+	if (UEnhancedInputComponent* EnhancedInputComponent =Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		EnhancedInputComponent->BindAction(
 			CaneAction,
@@ -82,6 +94,7 @@ void AVRCharacter::SetupPlayerInputComponent(
 			&AVRCharacter::EmitEcho);
 	}
 }
+
 
 void AVRCharacter::EmitEcho(
 	const FInputActionValue& Value)
