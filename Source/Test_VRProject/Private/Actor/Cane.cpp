@@ -117,7 +117,7 @@ void ACane::Tick(float DeltaTime)
 				if (UEchoComponent* Echo = Character->FindComponentByClass<UEchoComponent>())
 				{
 					// 杖が接触した位置を中心に音波を発生させる
-					Echo->EmitEcho(Hit.ImpactPoint,300.f);
+					Echo->CaneEmitEcho(Hit.ImpactPoint,EchoRadius,EchoSpeed,EchoFadeTime);
 				}
 			}
 		}

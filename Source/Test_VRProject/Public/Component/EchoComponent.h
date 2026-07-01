@@ -62,9 +62,14 @@ public:
 
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime,ELevelTick TickType,FActorComponentTickFunction* ThisTickFunction) override;
-
+	
+	// 右クリックの音波発生アクションで呼ばれる関数
 	UFUNCTION(BlueprintCallable)
 	void EmitEcho(const FVector& Location, float Radius);
+
+	// 杖の音波発生アクションで呼ばれる関数
+	UFUNCTION(BlueprintCallable)
+	void CaneEmitEcho(const FVector& Location, float Radius, float Speed, float FadeTime);
 
 protected:
 	// ポストプロセスへ値を渡すマテリアルのパラメータコレクション

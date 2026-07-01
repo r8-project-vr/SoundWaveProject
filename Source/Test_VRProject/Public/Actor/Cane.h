@@ -19,12 +19,22 @@ class TEST_VRPROJECT_API ACane : public AActor
 
 public:
 	ACane();
+	virtual void Tick(float DeltaTime) override;
+
+	// 音波の最大半径
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Echo")
+	float EchoRadius = 300.f;
+
+	// 音波の広がる速度
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Echo")
+	float EchoSpeed = 1000.f;
+
+	// 音波のフェード時間
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Echo")
+	float EchoFadeTime = 1.0f;
 
 protected:
 	virtual void BeginPlay() override;
-
-public:
-	virtual void Tick(float DeltaTime) override;
 
 private:
 	// 杖本体のメッシュ

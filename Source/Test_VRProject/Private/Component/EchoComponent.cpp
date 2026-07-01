@@ -195,8 +195,8 @@ void UEchoComponent::TickComponent(float DeltaTime,ELevelTick TickType,FActorCom
 }
 
 /// <summary>
-/// 指定した位置から音波を発生させる
-/// 音波の情報を登録し、Niagaraエフェクトを生成する
+/// 右クリックで指定した位置から音波を発生させる
+/// 音波の情報を登録し、Niagaraエフェクトを生成する ※今は未使用
 /// </summary>
 void UEchoComponent::EmitEcho(const FVector& Location,float Radius)
 {
@@ -227,6 +227,60 @@ void UEchoComponent::EmitEcho(const FVector& Location,float Radius)
 	// 音波を管理リストへ追加
 	ActiveEchoes.Add(NewEcho);
 
+	//=================================================
+	// Niagaraエフェクトを生成 ※今は未使用
+	//=================================================
+
+	if (EchoNiagara)
+	{
+		// 指定位置にNiagaraエフェクトを生成
+		UNiagaraComponent* Comp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(),EchoNiagara,Location);
+
+		// 生成に成功した場合
+		if (Comp)
+		{
+			// Niagaraコンポーネントを管理リストへ追加
+			ActiveEchoComponents.Add(Comp);
+
+			// 作成した音波にNiagaraコンポーネントを関連付ける
+			ActiveEchoes.Last().NiagaraComp = Comp;
+		}
+	}
+}
+
+/// <summary>
+/// 杖で指定した位置から音波を発生させる
+/// 音波の情報を登録し、Niagaraエフェクトを生成する ※今は未使用
+/// </summary>
+void UEchoComponent::CaneEmitEcho(const FVector& Location,float Radius,float Speed,float FadeTime)
+{
+	// 新しい音波の情報を作成
+	FEcho NewEcho;
+
+	// 音波の発生位置
+	NewEcho.Origin = Location;
+
+	// 音波の最大到達半径
+	NewEcho.MaxRadius = Radius;
+
+	// 音波が広がる速度
+	NewEcho.Speed = EchoSpeed;
+
+	// 発生直後なので半径は0
+	NewEcho.CurrentRadius = 0.f;
+
+	// 発生直後なので経過時間は0秒
+	NewEcho.Age = 0.f;
+
+	// 最大半径まで到達する時間を計算
+	NewEcho.LifeTime = Radius / EchoSpeed;
+
+	// 音波が消えるまでのフェード時間
+	NewEcho.FadeTime = GlobalEchoFadeTime;
+
+	// 音波を管理リストへ追加
+	ActiveEchoes.Add(NewEcho);
+	
 	//=================================================
 	// Niagaraエフェクトを生成 ※今は未使用
 	//=================================================
