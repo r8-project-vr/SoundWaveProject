@@ -234,17 +234,39 @@ void AEnemyAIController::ChackPlayer()
 		);
 
 	//Playerが特定の範囲に入ったら追跡
-	if (Distance < 500.f&&!bMovinToPlayerPoint)
+	if (Distance < DetectionRange && !bMovinToPlayerPoint)
 	{
 		bMovinToPlayerPoint = true;
 
-		Enemy->GetCharacterMovement()->MaxWalkSpeed = TrackingMoveSpeed;
+		Enemy->GetCharacterMovement()->MaxWalkSpeed = PatrolMoveSpeed;
 
 		MoveToActor(
 			Enemy->PlayerPoint,
 			DistanceToPlayer);
+
+		//デバック用--------------------------------------------------------------------
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("Playerを発見")
+		);
+		//_______________________________________________________________________________
 	}
-	else if (Distance >700.f && bMovinToPlayerPoint)
+
+	//追跡時のみ処理を行う
+	if (!bMovinToPlayerPoint) { return; }
+
+	//移動速度の設定
+	if(Distance < 300.0f)
+	{
+		Enemy->GetCharacterMovement()->MaxWalkSpeed = TrackingMoveSpeed;
+	}
+	else {
+		Enemy->GetCharacterMovement()->MaxWalkSpeed = PatrolMoveSpeed;
+	}
+
+	//見失った際にパトロールに戻る処理
+	if (Distance >= DetectionRange)
 	{
 		//デバック用--------------------------------------------------------------------
 		UE_LOG(
@@ -262,14 +284,6 @@ void AEnemyAIController::ChackPlayer()
 
 		Enemy->GetCharacterMovement()->MaxWalkSpeed = PatrolMoveSpeed;
 		MoveToNextPoint();
-	}
-	else
-	{
-		//Playerが範囲外に出たらパトロール再開
-		if (GetMoveStatus() != EPathFollowingStatus::Moving)
-		{
-			bMovinToPlayerPoint = false;
-		}
 	}
 }
 
