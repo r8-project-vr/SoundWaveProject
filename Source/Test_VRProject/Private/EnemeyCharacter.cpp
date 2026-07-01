@@ -2,6 +2,7 @@
 
 
 #include "EnemeyCharacter.h"
+#include "Kismet/GameplayStatics.h"
 #include "Component/EnemyAIController.h"
 
 // Sets default values
@@ -21,7 +22,6 @@ AEnemeyCharacter::AEnemeyCharacter()
 void AEnemeyCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 // Called every frame

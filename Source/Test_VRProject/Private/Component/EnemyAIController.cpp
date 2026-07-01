@@ -271,7 +271,7 @@ void AEnemyAIController::ChackPlayer()
 		//デバック用--------------------------------------------------------------------
 		UE_LOG(
 			LogTemp,
-			Display,
+			Warning,
 			TEXT("プレイヤーから離れました")
 		);
 		//_______________________________________________________________________________
@@ -283,6 +283,7 @@ void AEnemyAIController::ChackPlayer()
 		bCanDetectPlayer = false;
 
 		Enemy->GetCharacterMovement()->MaxWalkSpeed = PatrolMoveSpeed;
+		ReturnToPatrol();
 		MoveToNextPoint();
 	}
 }

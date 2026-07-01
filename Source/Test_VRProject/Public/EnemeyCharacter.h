@@ -33,7 +33,7 @@ public:
 
 	//Player用のPointの宣言
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite)
-	AEnemyPatrolPoint* PlayerPoint;
+	ACharacter* PlayerPoint;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	UEnemySoundComponent* SoundComponent;
