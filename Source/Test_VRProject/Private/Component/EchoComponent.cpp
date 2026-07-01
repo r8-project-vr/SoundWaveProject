@@ -49,19 +49,9 @@ void UEchoComponent::TickComponent(float DeltaTime,ELevelTick TickType,FActorCom
 		// 音波半径を時間経過に応じて拡大
 		if (Echo.LifeTime > KINDA_SMALL_NUMBER)
 		{
-			float Progress =
-				FMath::Clamp(
-					Echo.Age / Echo.LifeTime,
-					0.0f,
-					1.0f
-				);
+			float Progress = FMath::Clamp(Echo.Age / Echo.LifeTime, 0.0f, 1.0f);
 
-			Echo.CurrentRadius =
-				FMath::Lerp(
-					0.0f,
-					Echo.MaxRadius,
-					Progress
-				);
+			Echo.CurrentRadius = FMath::Lerp(0.0f, Echo.MaxRadius, Progress);
 		}
 		else
 		{
@@ -74,13 +64,7 @@ void UEchoComponent::TickComponent(float DeltaTime,ELevelTick TickType,FActorCom
 		{
 			if (Echo.FadeTime > KINDA_SMALL_NUMBER)
 			{
-				Alpha = 1.0f -
-					FMath::Clamp(
-						(Echo.Age - Echo.LifeTime)
-						/ Echo.FadeTime,
-						0.0f,
-						1.0f
-					);
+				Alpha = 1.0f - FMath::Clamp((Echo.Age - Echo.LifeTime) / Echo.FadeTime, 0.0f, 1.0f);
 			}
 			else
 			{
@@ -239,6 +223,7 @@ void UEchoComponent::EmitEcho(const FVector& Location,float Radius)
 		// 生成に成功した場合
 		if (Comp)
 		{
+			UE_LOG(LogTemp, Log, TEXT("Niagaraコンポーネントを生成しました"));
 			// Niagaraコンポーネントを管理リストへ追加
 			ActiveEchoComponents.Add(Comp);
 

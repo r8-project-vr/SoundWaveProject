@@ -28,7 +28,7 @@ struct FEcho
 	UPROPERTY()
 	float MaxRadius = 1000.f;
 
-	// 音波が広がる速度(cm/s)
+	// 音波が広がる速度
 	UPROPERTY()
 	float Speed = 2000.f;
 

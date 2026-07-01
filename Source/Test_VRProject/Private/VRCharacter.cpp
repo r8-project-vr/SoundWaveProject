@@ -41,9 +41,26 @@ void AVRCharacter::BeginPlay()
 		if (Cane)
 		{
 			Cane->SetOwner(this);
-
-			Cane->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, TEXT("MotionControllerRightGrip"));
 		}
+	}
+}
+
+/// <summary>
+/// プレイヤーの入力を設定する
+/// 右クリック(EchoAction)が押されたら音波を発生させる関数を呼ぶようにする
+/// </summary>
+void AVRCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
+	{
+		EnhancedInputComponent->BindAction(
+			EchoAction,
+			ETriggerEvent::Started,
+			this,
+			&AVRCharacter::EmitEcho
+		);
 	}
 }
 
@@ -70,21 +87,6 @@ void AVRCharacter::Tick(float DeltaTime)
 		EchoComponent->EmitEcho(GetActorLocation(),WalkEchoRadius);
 
 		WalkEchoTimer = 0.f;
-	}
-}
-
-void AVRCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-	if (UEnhancedInputComponent* EnhancedInputComponent =Cast<UEnhancedInputComponent>(PlayerInputComponent))
-	{
-		EnhancedInputComponent->BindAction(
-			EchoAction,
-			ETriggerEvent::Started,
-			this,
-			&AVRCharacter::EmitEcho
-		);
 	}
 }
 
