@@ -53,13 +53,15 @@ void UEchoComponent::TickComponent(float DeltaTime,ELevelTick TickType,FActorCom
 				FMath::Clamp(
 					Echo.Age / Echo.LifeTime,
 					0.0f,
-					1.0f);
+					1.0f
+				);
 
 			Echo.CurrentRadius =
 				FMath::Lerp(
 					0.0f,
 					Echo.MaxRadius,
-					Progress);
+					Progress
+				);
 		}
 		else
 		{
@@ -88,23 +90,6 @@ void UEchoComponent::TickComponent(float DeltaTime,ELevelTick TickType,FActorCom
 
 		// フェード中に内側から消える範囲を計算
 		float InnerRadius = 0.0f;
-		if (Echo.Age > Echo.LifeTime && Echo.FadeTime > KINDA_SMALL_NUMBER)
-		{
-			float FadeProgress =
-				FMath::Clamp(
-					(Echo.Age - Echo.LifeTime) / Echo.FadeTime,
-					0.0f,
-					1.0f
-				);
-			if (bInnerRadiusIsTransparent)
-			{
-				InnerRadius = FadeProgress * Echo.MaxRadius;
-			}
-			else
-			{
-				InnerRadius = (1.0f - FadeProgress) * Echo.MaxRadius;
-			}
-		}
 
 		// 現在表示する音波情報を更新
 		MaxAlpha 	   = FMath::Max(MaxAlpha, Alpha);
@@ -121,7 +106,7 @@ void UEchoComponent::TickComponent(float DeltaTime,ELevelTick TickType,FActorCom
 		}
 
 		// 寿命を過ぎた音波を削除
-		if (Echo.Age >= (Echo.LifeTime + Echo.FadeTime))
+		if (Echo.Age >= (Echo.LifeTime + Echo.FadeTime + 1.0f))
 		{
 			ActiveEchoes.RemoveAt(i);
 		}
@@ -201,7 +186,7 @@ void UEchoComponent::TickComponent(float DeltaTime,ELevelTick TickType,FActorCom
 			MPC->SetScalarParameterValue(TEXT("EchoRadius"),SmoothedEchoRadius);
 
 			// 内側フェード半径
-			MPC->SetScalarParameterValue(TEXT("EchoInnerRadius"),SmoothedEchoInnerRadius);
+			MPC->SetScalarParameterValue(TEXT("EchoInnerRadius"),0.0f);
 
 			// 音波の透明度
 			MPC->SetScalarParameterValue(TEXT("EchoAlpha"),SmoothedEchoAlpha);
@@ -210,8 +195,8 @@ void UEchoComponent::TickComponent(float DeltaTime,ELevelTick TickType,FActorCom
 }
 
 /// <summary>
-/// 指定した位置からエコーを発生させる
-/// エコー情報を登録し、Niagaraエフェクトを生成する
+/// 指定した位置から音波を発生させる
+/// 音波の情報を登録し、Niagaraエフェクトを生成する
 /// </summary>
 void UEchoComponent::EmitEcho(const FVector& Location,float Radius)
 {

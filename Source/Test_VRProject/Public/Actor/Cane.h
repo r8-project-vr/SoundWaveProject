@@ -35,9 +35,6 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	USphereComponent* TipPoint;
 
-	// 前フレームでアウトライン表示していたオブジェクト
-	UPrimitiveComponent* LastHighlighted = nullptr;
-
 	// 前フレームで何かに当たっていたか
 	bool bWasHitLastFrame = false;
 };

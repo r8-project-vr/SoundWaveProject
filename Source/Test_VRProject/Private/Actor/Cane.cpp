@@ -42,8 +42,6 @@ ACane::ACane()
 void ACane::BeginPlay()
 {
 	Super::BeginPlay();
-
-	UE_LOG(LogTemp,Warning,TEXT("Cane BeginPlay"));
 }
 
 /// <summary>
@@ -76,7 +74,8 @@ void ACane::Tick(float DeltaTime)
 			Start,
 			FQuat::Identity,
 			ECC_Visibility,
-			Sphere);
+			Sphere
+		);
 
 	// 判定位置をデバッグ表示
 	DrawDebugSphere(
@@ -86,17 +85,8 @@ void ACane::Tick(float DeltaTime)
 		12,
 		bHit ? FColor::Green : FColor::Red,
 		false,
-		0.f);
-
-	//==============================
-	// 前フレームのアウトラインを解除
-	//==============================
-
-	if (LastHighlighted)
-	{
-		LastHighlighted->SetRenderCustomDepth(false);
-		LastHighlighted = nullptr;
-	}
+		0.f
+	);
 
 	//==============================
 	// 先端にオブジェクトが接触した場合
@@ -110,11 +100,8 @@ void ACane::Tick(float DeltaTime)
 		// 描画値を設定
 		Hit.GetComponent()->SetCustomDepthStencilValue(1);
 
-		// 現在アウトライン表示中のコンポーネントを保存
-		LastHighlighted = Hit.GetComponent();
-
 		//==============================
-		// 接触時のみエコーを発生
+		// 接触時のみ音波を発生
 		//==============================
 
 		if (!bWasHitLastFrame)
@@ -135,12 +122,12 @@ void ACane::Tick(float DeltaTime)
 			}
 		}
 
-		// 次フレーム以降は連続接触扱いにする
+		// オブジェクトから離れるまで接触している判定
 		bWasHitLastFrame = true;
 	}
 	else
 	{
-		// オブジェクトから離れたため接触状態をリセット
+		// オブジェクトから離れたら接触状態をリセット
 		bWasHitLastFrame = false;
 	}
 }

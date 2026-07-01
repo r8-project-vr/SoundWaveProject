@@ -64,9 +64,7 @@ public:
 	virtual void TickComponent(float DeltaTime,ELevelTick TickType,FActorComponentTickFunction* ThisTickFunction) override;
 
 	UFUNCTION(BlueprintCallable)
-	void EmitEcho(
-		const FVector& Location,
-		float Radius);
+	void EmitEcho(const FVector& Location, float Radius);
 
 protected:
 	// ポストプロセスへ値を渡すマテリアルのパラメータコレクション
@@ -111,13 +109,13 @@ private:
 	// ポストプロセスの補間後のAlpha値
 	float SmoothedEchoAlpha = 0.0f;
 
-	// ポストプロセスの補間後のエコー半径
+	// ポストプロセスの補間後の音波の半径
 	float SmoothedEchoRadius = 0.0f;
 
-	// ポストプロセスの補間後の内側半径
+	// ポストプロセスの補間後の音波の内側半径
 	float SmoothedEchoInnerRadius = 0.0f;
 
-	// ポストプロセスの補間後のエコー中心座標
+	// ポストプロセスの補間後の音波の中心座標
 	FVector SmoothedEchoOrigin = FVector::ZeroVector;
 
 };

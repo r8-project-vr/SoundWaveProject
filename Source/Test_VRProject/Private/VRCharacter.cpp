@@ -33,43 +33,37 @@ void AVRCharacter::BeginPlay()
 		}
 	}
 
-	// 杖を生成して右手ソケットへ装着
+	// 杖を生成
 	if (CaneClass)
 	{
 		Cane = GetWorld()->SpawnActor<ACane>(CaneClass);
 
 		if (Cane)
 		{
-			UE_LOG(LogTemp,Warning,TEXT("Spawned Cane = %s"), *Cane->GetName());
 			Cane->SetOwner(this);
 
-			UE_LOG(LogTemp,Warning,TEXT("After SetOwner = %s"), Cane->GetOwner() ? *Cane->GetOwner()->GetName() : TEXT("NULL"));
-
-			Cane->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, TEXT("RightHandSocket"));
+			Cane->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, TEXT("MotionControllerRightGrip"));
 		}
 	}
 }
 
 /// <summary>
 /// 毎フレーム呼ばれる更新処理
-/// プレイヤーが歩いている場合は一定間隔でエコーを発生させる
+/// プレイヤーが歩いている場合は一定間隔で音波を発生させる
 /// </summary>
 void AVRCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	// 歩行エコー用タイマーを更新
+	// 歩行音波用タイマーを更新
 	WalkEchoTimer += DeltaTime;
 
-	if (!EchoComponent)
-	{
-		return;
-	}
+	if (!EchoComponent){ return; }
 
 	// 現在の移動速度を取得
 	const float Speed = GetVelocity().Size();
 
-	// 一定速度以上で歩いていればエコーを発生
+	// 一定速度以上で歩いていれば音波を発生
 	if (Speed > WalkEchoVelocityThreshold && WalkEchoTimer >= WalkEchoInterval)
 	{
 		//音波の呼び出し
@@ -86,7 +80,7 @@ void AVRCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	if (UEnhancedInputComponent* EnhancedInputComponent =Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		EnhancedInputComponent->BindAction(
-			CaneAction,
+			EchoAction,
 			ETriggerEvent::Started,
 			this,
 			&AVRCharacter::EmitEcho
@@ -96,14 +90,9 @@ void AVRCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 /// <summary>
 /// プレイヤーが右クリックした時に呼ばれる
-/// 最大半径のエコーを発生させる
+/// 最大半径の音波を発生させる
 /// </summary>
 void AVRCharacter::EmitEcho(const FInputActionValue& Value)
 {
-	if (EchoComponent)
-	{
-		EchoComponent->EmitEcho(
-			GetActorLocation(),
-			MaxEchoRadius);
-	}
+	if (EchoComponent){ EchoComponent->EmitEcho(GetActorLocation(), MaxEchoRadius); }
 }

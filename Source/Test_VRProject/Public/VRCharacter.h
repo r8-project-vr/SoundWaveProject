@@ -35,7 +35,7 @@ protected:
 
 	// 右クリックの音波発生アクション
 	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputAction* CaneAction;
+	UInputAction* EchoAction;
 
 	// 音波を管理するコンポーネント
 	UPROPERTY(VisibleAnywhere, Category = "Echo")
