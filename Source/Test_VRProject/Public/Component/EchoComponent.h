@@ -46,6 +46,9 @@ struct FEcho
 
 	// この音波に対応するNiagaraコンポーネント　※今のところは使用していない
 	TWeakObjectPtr<UNiagaraComponent> NiagaraComp;
+
+	// 右クリック・杖の音波なら true
+	bool bIsPriority = false;
 };
 
 /// <summary>
@@ -62,6 +65,12 @@ public:
 
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime,ELevelTick TickType,FActorComponentTickFunction* ThisTickFunction) override;
+
+	// 右クリックまたは杖が表示中かを返す関数
+	bool IsPriorityEchoActive() const;
+
+	// 右クリック・杖の音波の表示開始を登録する関数
+	void StartPriorityEcho(float Radius, float Speed, float FadeTime);
 	
 	// 右クリックの音波発生アクションで呼ばれる関数
 	UFUNCTION(BlueprintCallable)
@@ -70,6 +79,10 @@ public:
 	// 杖の音波発生アクションで呼ばれる関数
 	UFUNCTION(BlueprintCallable)
 	void CaneEmitEcho(const FVector& Location, float Radius, float Speed, float FadeTime);
+
+	// 歩行用の音波を発生させる関数
+	UFUNCTION(BlueprintCallable)
+	void WalkEmitEcho(const FVector& Location, float Radius);
 
 protected:
 	// ポストプロセスへ値を渡すマテリアルのパラメータコレクション
@@ -94,6 +107,11 @@ private:
 	// 再生中のNiagaraコンポーネント
 	TArray<TObjectPtr<UNiagaraComponent>> ActiveEchoComponents;
 
+	// 現在、右クリックまたは杖の音波を表示しているか
+	bool bPriorityEchoActive = false;
+
+	// 音波が完全に消える時間
+	float PriorityEchoEndTime = 0.f;
 	// ポストプロセスのAlpha値を滑らかに補間する速度
 	UPROPERTY(EditAnywhere)
 	float EchoAlphaInterpSpeed = 6.0f;

@@ -116,8 +116,12 @@ void ACane::Tick(float DeltaTime)
 				// プレイヤーが持つEchoComponentを取得
 				if (UEchoComponent* Echo = Character->FindComponentByClass<UEchoComponent>())
 				{
-					// 杖が接触した位置を中心に音波を発生させる
-					Echo->CaneEmitEcho(Hit.ImpactPoint,EchoRadius,EchoSpeed,EchoFadeTime);
+					// 右クリックまたは杖の音波が表示中なら、杖音波は出さない
+					if (!Echo->IsPriorityEchoActive())
+					{
+						// 杖が接触した位置を中心に音波を発生させる
+						Echo->CaneEmitEcho(Hit.ImpactPoint, EchoRadius, EchoSpeed, EchoFadeTime);
+					}
 				}
 			}
 		}
