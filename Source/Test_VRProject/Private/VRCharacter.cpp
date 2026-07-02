@@ -83,8 +83,11 @@ void AVRCharacter::Tick(float DeltaTime)
 	// 一定速度以上で歩いていれば音波を発生
 	if (Speed > WalkEchoVelocityThreshold && WalkEchoTimer >= WalkEchoInterval)
 	{
-		//音波の呼び出し
-		EchoComponent->EmitEcho(GetActorLocation(),WalkEchoRadius);
+		// 右クリック・杖のアウトライン表示中は、歩行アウトラインを出さない
+		if (!EchoComponent->IsPriorityEchoActive())
+		{
+			EchoComponent->WalkEmitEcho(GetActorLocation(), WalkEchoRadius);
+		}
 
 		WalkEchoTimer = 0.f;
 	}
@@ -96,5 +99,10 @@ void AVRCharacter::Tick(float DeltaTime)
 /// </summary>
 void AVRCharacter::EmitEcho(const FInputActionValue& Value)
 {
-	if (EchoComponent){ EchoComponent->EmitEcho(GetActorLocation(), MaxEchoRadius); }
+	if (!EchoComponent){ return; }
+
+	// 杖または右クリックのアウトラインが残っている間は、新しい右クリック入力を受け付けない
+	if (EchoComponent->IsPriorityEchoActive()){ return; }
+
+	EchoComponent->EmitEcho(GetActorLocation(), MaxEchoRadius);
 }

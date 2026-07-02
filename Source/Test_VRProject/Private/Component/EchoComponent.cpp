@@ -18,6 +18,23 @@ void UEchoComponent::BeginPlay()
 	SmoothedEchoOrigin = GetOwner()->GetActorLocation();
 }
 
+bool UEchoComponent::IsPriorityEchoActive() const
+{
+	return bPriorityEchoActive;
+}
+
+void UEchoComponent::StartPriorityEcho(float Radius, float Speed, float FadeTime)
+{
+	bPriorityEchoActive = true;
+
+	const float LifeTime = Radius / Speed;
+
+	PriorityEchoEndTime =
+		GetWorld()->GetTimeSeconds()
+		+ LifeTime
+		+ FadeTime;
+}
+
 /// <summary>
 /// 音波の更新処理
 /// 半径・透明度・ポストプロセスのパラメータを毎フレーム更新する
@@ -25,6 +42,8 @@ void UEchoComponent::BeginPlay()
 void UEchoComponent::TickComponent(float DeltaTime,ELevelTick TickType,FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime,TickType,ThisTickFunction);
+
+	bool bHasPriorityEcho = false;
 
 	// 現在表示する音波の情報を保持するための変数
 	float MaxAlpha = 0.0f;
@@ -42,6 +61,8 @@ void UEchoComponent::TickComponent(float DeltaTime,ELevelTick TickType,FActorCom
 	for (int32 i = ActiveEchoes.Num() - 1; i >= 0; --i)
 	{
 		FEcho& Echo = ActiveEchoes[i];
+
+		if (Echo.bIsPriority){ bHasPriorityEcho = true; }
 
 		// 音波の経過時間を更新
 		Echo.Age += DeltaTime;
@@ -95,6 +116,7 @@ void UEchoComponent::TickComponent(float DeltaTime,ELevelTick TickType,FActorCom
 			ActiveEchoes.RemoveAt(i);
 		}
 	}
+	bPriorityEchoActive = bHasPriorityEcho;
 
 	//=================================================
     // 表示するエコーの中心位置を決定
@@ -208,6 +230,10 @@ void UEchoComponent::EmitEcho(const FVector& Location,float Radius)
 	// 音波が消えるまでのフェード時間
 	NewEcho.FadeTime = GlobalEchoFadeTime;
 
+	// 右クリックの音波中にする
+	NewEcho.bIsPriority = true;
+	bPriorityEchoActive = true;
+
 	// 音波を管理リストへ追加
 	ActiveEchoes.Add(NewEcho);
 
@@ -249,7 +275,7 @@ void UEchoComponent::CaneEmitEcho(const FVector& Location,float Radius,float Spe
 	NewEcho.MaxRadius = Radius;
 
 	// 音波が広がる速度
-	NewEcho.Speed = EchoSpeed;
+	NewEcho.Speed = Speed;
 
 	// 発生直後なので半径は0
 	NewEcho.CurrentRadius = 0.f;
@@ -258,10 +284,14 @@ void UEchoComponent::CaneEmitEcho(const FVector& Location,float Radius,float Spe
 	NewEcho.Age = 0.f;
 
 	// 最大半径まで到達する時間を計算
-	NewEcho.LifeTime = Radius / EchoSpeed;
+	NewEcho.LifeTime = Radius / Speed;
 
 	// 音波が消えるまでのフェード時間
-	NewEcho.FadeTime = GlobalEchoFadeTime;
+	NewEcho.FadeTime = FadeTime;
+
+	// 右クリックの音波中にする
+	NewEcho.bIsPriority = true;
+	bPriorityEchoActive = true;
 
 	// 音波を管理リストへ追加
 	ActiveEchoes.Add(NewEcho);
@@ -285,4 +315,39 @@ void UEchoComponent::CaneEmitEcho(const FVector& Location,float Radius,float Spe
 			ActiveEchoes.Last().NiagaraComp = Comp;
 		}
 	}
+}
+
+/// <summary>
+/// 歩行音波を発生させる
+/// 音波の情報を登録し、Niagaraエフェクトを生成する ※今は未使用
+/// </summary>
+void UEchoComponent::WalkEmitEcho(const FVector& Location, float Radius)
+{
+	if (bPriorityEchoActive){ return; }
+	// 新しい音波の情報を作成
+	FEcho NewEcho;
+
+	// 音波の発生位置
+	NewEcho.Origin = Location;
+
+	// 音波の最大到達半径
+	NewEcho.MaxRadius = Radius;
+
+	// 音波が広がる速度
+	NewEcho.Speed = EchoSpeed;
+
+	// 発生直後なので半径は0
+	NewEcho.CurrentRadius = 0.f;
+
+	// 発生直後なので経過時間は0秒
+	NewEcho.Age = 0.f;
+
+	// 最大半径まで到達する時間を計算
+	NewEcho.LifeTime = Radius / EchoSpeed;
+
+	// 音波が消えるまでのフェード時間
+	NewEcho.FadeTime = GlobalEchoFadeTime;
+
+	// 音波を管理リストへ追加
+	ActiveEchoes.Add(NewEcho);
 }
