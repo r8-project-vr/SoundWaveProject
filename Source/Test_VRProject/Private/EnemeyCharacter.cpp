@@ -2,6 +2,7 @@
 
 
 #include "EnemeyCharacter.h"
+#include "Kismet/GameplayStatics.h"
 #include "Component/EnemyAIController.h"
 
 // Sets default values
@@ -12,13 +13,15 @@ AEnemeyCharacter::AEnemeyCharacter()
 	AutoPossessAI =
 		EAutoPossessAI::PlacedInWorldOrSpawned;
 
+	SoundComponent =
+		CreateDefaultSubobject<UEnemySoundComponent>( TEXT("EnemySoundComponent"));
+
 }
 
 // Called when the game starts or when spawned
 void AEnemeyCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 // Called every frame

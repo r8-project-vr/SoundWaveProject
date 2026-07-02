@@ -1,9 +1,8 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Component/EnemySoundComponent.h"
 #include "EnemeyCharacter.generated.h"
 
 class AEnemyPatrolPoint;
@@ -34,5 +33,8 @@ public:
 
 	//Player用のPointの宣言
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite)
-	AEnemyPatrolPoint* PlayerPoint;
+	ACharacter* PlayerPoint;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UEnemySoundComponent* SoundComponent;
 };

@@ -32,7 +32,10 @@ public:
 	const float TrackingMoveSpeed = 200.0f;
 
 	//playerまでの判定距離
-	float DistanceToPlayer = 100.0f;
+	const float DistanceToPlayer = 100.0f;
+
+	//発見する範囲の距離
+	const float DetectionRange = 700.0f;
 
 	//待機時間
 	const float WaitTime = 1.0f;
